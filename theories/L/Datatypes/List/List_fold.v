@@ -6,7 +6,7 @@ Set Default Proof Using "Type".
 
 Section forallb. 
   Variable (X : Type).
-  Context (H : registered X).
+  Context (H : encodable X).
 
   Definition c__forallb := 15. 
   Definition forallb_time (fT : X -> nat) (l : list X) := sumn (map (fun elm => fT elm + c__forallb) l) + c__forallb. 
@@ -34,8 +34,8 @@ End forallb.
 
   Section foldl_time.
   Context {X Y : Type}.
-  Context {H : registered X}.
-  Context {F : registered Y}.
+  Context {H : encodable X}.
+  Context {F : encodable Y}.
 
   Definition c__fold_left := 15. 
   Definition c__fold_left2 := 5.
@@ -55,8 +55,8 @@ End foldl_time.
 
   Section foldr_time.
   Context {X Y: Type}.
-  Context {H:registered X}.
-  Context {H0: registered Y}.
+  Context {H:encodable X}.
+  Context {H0: encodable Y}.
 
   Definition c__fold_right := 15.
   Fixpoint fold_right_time (f : Y -> X -> X) (tf : Y -> X -> nat) (l : list Y) (acc : X) :=

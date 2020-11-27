@@ -7,7 +7,7 @@ From Undecidability.TM Require Import Util.TM_facts.
 Set Default Proof Using "Type".
 Section fix_sig.
   Variable sig : Type.
-  Context `{reg_sig : registered sig}.
+  Context `{reg_sig : encodable sig}.
 
   Section reg_tapes.
 
@@ -113,7 +113,7 @@ Section fix_sig.
   End reg_tapes.
 End fix_sig.
 
-Fixpoint loopTime {X} `{registered X} f (fT: timeComplexity (X -> X)) (p: X -> bool) (pT : timeComplexity (X -> bool)) (a:X) k :=
+Fixpoint loopTime {X} `{encodable X} f (fT: timeComplexity (X -> X)) (p: X -> bool) (pT : timeComplexity (X -> bool)) (a:X) k :=
   fst (pT a tt) +
   match k with
     0 => 7
@@ -121,7 +121,7 @@ Fixpoint loopTime {X} `{registered X} f (fT: timeComplexity (X -> X)) (p: X -> b
      fst (fT a tt) + 13 + loopTime f fT p pT (f a) k
   end.
 
-Instance term_loop A `{registered A} :
+Instance term_loop A `{encodable A} :
   computableTime' (@loop A)
                  (fun f fT => (1,fun p pT => (1,fun a _ => (5,fun k _ =>(loopTime f fT p pT a k,tt))))).
 Proof.
