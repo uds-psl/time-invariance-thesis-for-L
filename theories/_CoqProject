@@ -361,6 +361,7 @@ TM/Util/ArithPrelim.v
 TM/Util/VectorPrelim.v
 
 TM/Util/TM_facts.v
+TM/Util/TM_alt.v
 
 TM/Basic/Basic.v
 TM/Basic/Null.v
@@ -520,6 +521,7 @@ L/Functions/Ackermann.v
 
 L/TM/TMEncoding.v
 L/TM/TMinL.v
+L/TM/TimeInvarianceTermination.v
 L/TM/TMinL/TMinL_extract.v
 L/TM/TapeFuns.v
 L/Reductions/TM_to_L.v
