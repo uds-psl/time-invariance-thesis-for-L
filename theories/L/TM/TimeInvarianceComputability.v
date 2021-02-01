@@ -335,24 +335,45 @@ Section loopM.
 
 End loopM.
 
+Lemma TM_size_diff {Σ k} (M : TM Σ k) cfg cfg' i j :
+  loopM (cfg : mconfig Σ (state M) k) i = Some cfg' ->
+  sizeOfTape ((ctapes cfg')[@j]) <= i + sizeOfTape ((ctapes cfg)[@j]).
+Proof.
+  induction i in cfg |- *; cbn; intros H; destruct haltConf; inv H; cbn.
+  - lia.
+  - lia.
+  - eapply IHi in H1. rewrite H1.
+    enough (sizeOfTape (ctapes (TM_facts.step cfg))[@j] <= S (sizeOfTape (ctapes cfg)[@j])) by lia.
+    destruct cfg as (q, t); cbn.
+    unfold TM_facts.step. cbn. destruct trans. cbn. clear.
+    induction t0; depelim j; depelim t; cbn; eauto.
+    destruct h0 as [[] []], h as [ | | | [] ? [] ]; cbn; try rewrite !app_length, !rev_length; cbn; lia.
+Qed.
+    
 Theorem TimeInvarianceThesis_wrt_Computability_TM_to_L {k} (R : Vector.t (list bool) k -> (list bool) -> Prop) (τ : Vector.t nat k -> nat -> Prop) :
   TM_bool_computable R τ -> exists p1, L_bool_computable R (fun v i => exists j, τ v j /\ p1 v j = i).
 Proof.
   intros (n & Σ & s & b & Heq & M & H).
-  exists (fun v N =>
+  pose (p := fun (v : Vector.t nat k) N =>
        1 + 3 * k +
        (1 +
         (10 * S N * sizeTM M + 10 + 12 * n +
          (c__prepare * (1 + sumn (Vector.to_list v) + k) + (N * c__unencListTM Σ + c__unencListTM Σ + 25))))
-    ).
-  exists (the_term s b M). intros v. specialize (H v) as [H1 H2]. split.
-  - intros l (q & t & i & H & He & Hi) % H1. eexists. split.
+       ).
+  exists p, (the_term s b M). intros v. specialize (H v) as [H1 H2]. split.
+  - intros l (q & t & i & H & He & Hi) % H1.
+    exists (p (Vector.map (length (A :=bool)) v) i).
+    split. 2: eauto. 
     eapply evalIn_mono.
     econstructor. 2:{ change (lambda (enc l)). Lproc. }
-    eapply the_term_forward; eauto. unfold list_size. instantiate (1 := _ + _).
-    eapply le_plus_l. exists i. split. eauto.
-    assert ((| encBoolsListTM s b l |) <= i). admit.
-    rewrite vector_map_to_list, vector_to_list_length. admit.
+    eapply the_term_forward; eauto. unfold list_size. unfold p.
+    assert (Hleq : (| encBoolsListTM s b l |) <= i). {
+      transitivity (sizeOfTape (Vector.hd t)). rewrite Hi.
+      cbn. lia.
+      assert (Vector.hd t = t[@Fin0]) as -> by now depelim t.
+      eapply TM_size_diff in H. cbn in H. rewrite H. cbn. lia.
+    }
+    rewrite Hleq, vector_map_to_list, vector_to_list_length. solverec.
   - intros o (? & ? & ?) % the_term_backward. now eapply H2. eauto.
-Admitted.
+Qed.
 

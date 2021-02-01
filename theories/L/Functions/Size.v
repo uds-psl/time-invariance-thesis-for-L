@@ -70,7 +70,7 @@ Proof.
   induction s;cbn [size sizeTR'_fuel];try Lia.lia.
 Qed.
 
-Instance termT_size : computableTime' size (fun s _ => (108 * size s + 50,tt)).
+Instance termT_size : computableTime' size (fun s _ => (108 * size s + 52,tt)).
 Proof.
   eexists.
   eapply computesTime_timeLeq.
@@ -82,13 +82,13 @@ Proof.
   split. 2:exact Logic.I.
   cbn [fst].
   erewrite uiterTime_bound_recRel with (iterT := fun _ '(stack,res) => ((sumn (map size stack)) * 108
-                                                                   + 35 + 9))
+                                                                   + 35 + 11))
                                        (P:= fun n x => True).
   { cbn [length map sumn]. Lia.lia. }
   {intros n [stack res] H. cbn.
    destruct stack as [|[[]| |]].
    2-5:split;[easy|].
-   all:cbn [length map sumn sizeTR'_fuel size];try Lia.lia.
+   all:cbn [length map sumn sizeTR'_fuel size];try lia. 
   }
   all:easy.
 Qed.
