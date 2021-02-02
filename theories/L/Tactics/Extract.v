@@ -167,7 +167,14 @@ Arguments int_ext {_} _ {_}.
 Typeclasses Transparent extracted. (* This is crucial to use this inside monads  *)
 Hint Extern 0 (extracted _) => progress (cbn [Common.my_projT1]): typeclass_instances. 
 
-Class encodable (A : Type) := enc_f : A -> L.term.  
+Class encodable (X : Type) := mk_encodable
+  {
+    enc : X -> L.term ; (* the encoding function for X *)
+    proc_enc : forall x, proc (enc x) ; (* encodings need to be a procedure *)
+  }.
+Hint Mode encodable + : typeclass_instances. (* treat argument as input and force evar-freeness*)
+
+Arguments enc : simpl never.  (* Never unfold with cbn/simpl *)
 
 (* Construct quoted L terms and natural numbers *)
 
@@ -245,8 +252,7 @@ Definition encode_arguments (B : term) (a i : nat) A_j :=
       A <- tmUnquoteTyped Type A_j ;;
       name <- (tmEval cbv (name_of A_j ++ "_term") >>=  tmFreshName)  ;;
       E <- tmTryInfer name None (encodable A);;
-      t <- tmEval hnf (@enc_f A E);;
-      l <- tmQuote t;;
+      l <- tmQuote (@enc A E);;
       ret (tApp l [tRel (a - i - 1) ]).
 
 Definition tmInstanceRed name red {X} (x:X) :=
@@ -258,12 +264,12 @@ Definition tmInstanceRed name red {X} (x:X) :=
   end;;
   tmReturn def'.
 
-Definition tmEncode (name : string) (A : Type) :=
+  Definition tmEncode (A : Type) : TemplateMonad (A -> L.term):=
   t <- (tmEval hnf A >>= tmQuote) ;; 
   hs_num <- tmGetOption (split_head_symbol t) "no inductive";;
   let '(ind, Params) := hs_num in
   num <- tmNumConstructors (inductive_mind ind) ;;
-  f <- tmFreshName "encode" ;;
+  f <- tmFreshName ("enc_" ++ snd (inductive_mind ind))  ;;
   x <- tmFreshName "x" ;; 
   ter <- mkFixMatch f x t (* argument type *) tTerm (* return type *)
            (fun i (* ctr index *) ctr_types (* ctr type *) => 
@@ -272,38 +278,40 @@ Definition tmEncode (name : string) (A : Type) :=
               ret (stack (map (tLambda (nAnon)) ctr_types)
                                (it mkLam num ((fun s => mkAppList s C) (mkVar (mkNat (num - i - 1))))))
            ) ;;
-  u <- tmUnquoteTyped (encodable A) ter;; 
- tmInstanceRed name None u;;
- tmEval hnf u.
+  u <- tmUnquoteTyped (A -> L.term) ter;; 
+ ret u.
 
 (* **** Examples *)
 (* Commented out for less printing while compiling *)
 
-(* MetaCoq Run (tmEncode "unit_encode" unit >>= tmPrint). *)
+(* MetaCoq Run (tmEncode unit >>= tmPrint).
 
-(* MetaCoq Run (tmEncode "bool_encode" bool >>= tmPrint). *)
+MetaCoq Run (tmEncode bool >>= tmPrint).
 
-(* MetaCoq Run (tmEncode "nat_encode" nat >>= tmPrint). *)
+MetaCoq Run (tmEncode nat >>= tmPrint).
 
-(* MetaCoq Run (tmEncode "term_encode" L.term >>= tmPrint). *)
+Section term.
+  Context { encA : encodable nat}.
+  MetaCoq Run (tmEncode L.term >>= tmPrint).
+End term.
 
-(* Inductive triple (X Y Z : Type) : Type := *)
-(*   trip (x : X) (y : Y) (z : Z) : triple X Y Z. *)
+Inductive triple (X Y Z : Type) : Type :=
+  trip (x : X) (y : Y) (z : Z) : triple X Y Z.
 
-(* Section encode. *)
+Section encode.
 
-(*   Variable A B C : Type. *)
-(*   Context { encA : encodable A}. *)
-(*   Context { encB : encodable B}. *)
-(*   Context { encC : encodable C}. *)
+  Variable A B C : Type.
+  Context { encA : encodable A}.
+  Context { encB : encodable B}.
+  Context { encC : encodable C}.
     
-(*   MetaCoq Run (tmEncode "prod_encode" (@prod A B) >>= tmPrint). *)
+  MetaCoq Run (tmEncode (@prod A B) >>= tmPrint).
 
-(*   MetaCoq Run (tmEncode "list_encode" (@list A) >>= tmPrint). *)
+  MetaCoq Run (tmEncode (@list A) >>= tmPrint).
 
-(*   MetaCoq Run (tmEncode "triple_encode" (@triple A B C) >>= tmPrint). *)
+  MetaCoq Run (tmEncode (@triple A B C) >>= tmPrint).
 
-(* End encode. *)
+End encode. *)
 
 (* *** Generation of constructors *)
 
@@ -574,5 +582,3 @@ Opaque extracted.
 (* End extract. *)
 
 Global Obligation Tactic := idtac.
-
-Typeclasses Transparent encodable.

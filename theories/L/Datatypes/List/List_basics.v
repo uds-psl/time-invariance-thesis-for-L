@@ -6,7 +6,7 @@ From Undecidability.Shared.Libs.PSL.Lists Require Export Filter.
 Set Default Proof Using "Type".
 
 Definition c__app := 16.
-Instance termT_append X {intX : registered X} : computableTime' (@List.app X) (fun A _ => (5,fun B _ => (length A * c__app + c__app,tt))).
+Instance termT_append X {intX : encodable X} : computableTime' (@List.app X) (fun A _ => (5,fun B _ => (length A * c__app + c__app,tt))).
 Proof.
   extract.
   solverec. all: now unfold c__app. 
@@ -19,7 +19,7 @@ Fixpoint map_time {X} (fT:X -> nat) xs :=
   | x :: xs => fT x + map_time fT xs + c__map
   end.
   
-Instance term_map (X Y:Type) (Hx : registered X) (Hy:registered Y): computableTime' (@map X Y) (fun _ fT => (1,fun l _ => (map_time (fun x => fst (fT x tt)) l,tt))).
+Instance term_map (X Y:Type) (Hx : encodable X) (Hy:encodable Y): computableTime' (@map X Y) (fun _ fT => (1,fun l _ => (map_time (fun x => fst (fT x tt)) l,tt))).
 Proof.
   extract.
   solverec. all: unfold c__map; solverec. 
@@ -39,19 +39,19 @@ Proof.
   induction x; cbn - [plus mult]; nia.
 Qed.
 
-Instance term_map_noTime (X Y:Type) (Hx : registered X) (Hy:registered Y): computable (@map X Y).
+Instance term_map_noTime (X Y:Type) (Hx : encodable X) (Hy:encodable Y): computable (@map X Y).
 Proof.
   extract.
 Defined. (*because other extract*)
   
-Instance termT_rev_append X `{registered X}: computableTime' (@rev_append X) (fun l _ => (5,fun res _ => (length l*13+4,tt))).
+Instance termT_rev_append X `{encodable X}: computableTime' (@rev_append X) (fun l _ => (5,fun res _ => (length l*13+4,tt))).
 extract.
 recRel_prettify.
 solverec.
 Qed.
 
 Definition c__rev := 13. 
-Instance termT_rev X `{registered X}: computableTime' (@rev X) (fun l _ => ((length l + 1) *c__rev,tt)).
+Instance termT_rev X `{encodable X}: computableTime' (@rev X) (fun l _ => ((length l + 1) *c__rev,tt)).
 eapply computableTimeExt with (x:= fun l => rev_append l []).
 {intro. rewrite rev_alt. reflexivity. }
 extract. solverec. unfold c__rev; solverec. 
@@ -59,7 +59,7 @@ Qed.
 
 Section Fix_X.
   Variable (X:Type).
-  Context {intX : registered X}.
+  Context {intX : encodable X}.
 
   Global Instance term_filter: computableTime' (@filter X) (fun p pT => (1,fun l _ => (fold_right (fun x res => 16 + res + fst (pT x tt)) 8 l ,tt))).
   Proof using intX.
@@ -87,7 +87,7 @@ End Fix_X.
 
 
 Section concat.
-  Context X `{registered X}.
+  Context X `{encodable X}.
 
   Fixpoint rev_concat acc (xs : list (list X)) :=
     match xs with
