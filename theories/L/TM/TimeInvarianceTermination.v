@@ -22,7 +22,7 @@ Import HOAS_Notations.
 
 Variable Σ : finType.
 
-Let reg_sig := @registered_finType Σ.
+Let reg_sig := @encodable_finType Σ.
 Existing Instance reg_sig.
 
 Variable n_tps : nat.
@@ -32,7 +32,7 @@ Definition s_sim : term := Eval cbn -[enc] in [L_HOAS (λ M_q0 tps, ha M_q0 (λ 
 Variable M : TM Σ n_tps.
 Variables (q q' : state M) (t t' : tapes Σ n_tps).
 
-Let reg_state := @registered_finType (state M).
+Let reg_state := @encodable_finType (state M).
 Existing Instance reg_state.
 
 Definition step_fun := (fun cfg : mconfig Σ (state M) n_tps =>
@@ -102,15 +102,15 @@ Definition sizeTM Σ n (M : TM Σ n) := (haltTime M + n* 130+ transTime M + 185 
 
 Definition encTM {n} {Σ : finType} : TM Σ n -> term.
 Proof.
-  pose (reg_sig := @registered_finType Σ).
+  pose (reg_sig := @encodable_finType Σ).
   intros M.
-  pose (reg_state := @registered_finType (state M)).
+  pose (reg_state := @encodable_finType (state M)).
   unshelve refine (PAIR_ (extT (step_fun (M := M))) (enc (start M))). 3:eapply step_fun_comp.
 Defined.
 
 Definition encTps  {n} {Σ : finType} : tapes Σ n -> term.
 Proof.
-  pose (reg_sig := @registered_finType Σ).
+  pose (reg_sig := @encodable_finType Σ).
   intros tps. exact (enc tps).  
 Defined.
 
@@ -122,7 +122,7 @@ Theorem TimeInvarianceThesis_wrt_Termination_TM_to_L : let C := 10 in
           (forall v, eval (s_sim (encTM M) (encTps tps)) v -> exists q' tps' i, loopM (mk_mconfig (start M) tps) i = Some (mk_mconfig q' tps')).
 Proof.
   intros C n Σ. subst C.
-  pose (reg_sig := @registered_finType Σ).
+  pose (reg_sig := @encodable_finType Σ).
   intros M tps. split.
   - intros tps' i q' H.
     rewrite loopSumM_loopM_iff in H.
@@ -134,34 +134,3 @@ Proof.
     fold (sizeTM M). ring_simplify. lia.
   - intros v (q' & t' & [] & H) % TimeInvarianceNF_backward. inv H. setoid_rewrite loopSumM_loopM_iff. eauto.
 Qed.
-
-(* Theorem TimeInvarianceThesis_wrt_Termination_TM_to_L : *)
-(*   forall n Σ, exists encTM : TM Σ n -> term, exists encTps : tapes Σ n -> term, *)
-(*       exists sₛᵢₘ : term, exists C1 C2 : nat, forall M : TM Σ n, forall tps, *)
-(*               (forall tps' i q', *)
-(*                   loopM (mk_mconfig (start M) tps) i = Some (mk_mconfig q' tps') -> *)
-(*                   evalLe (C1 * (S i) * sizeTM M + C2) (sₛᵢₘ (encTM M) (encTps tps)) (encTps tps')) /\ *)
-(*               (forall v, eval (sₛᵢₘ (encTM M) (encTps tps)) v -> exists q' tps' i, loopM (mk_mconfig (start M) tps) i = Some (mk_mconfig q' tps')). *)
-(* Proof. *)
-(*   intros n Σ. *)
-(*   pose (reg_sig := @registered_finType Σ). *)
-(*   unshelve eexists. *)
-(*   { intros M. *)
-(*     pose (reg_state := @registered_finType (state M)). *)
-(*     unshelve refine (PAIR (extT (step_fun (M := M))) (enc (start M))). 3:eapply step_fun_comp. *)
-(*   } *)
-(*   unshelve eexists. *)
-(*   { intros tps. exact (enc tps). } *)
-(*   exists s_sim. *)
-(*   eexists 10, 10. *)
-(*   intros M tps. split. *)
-(*   - intros tps' i q' H. *)
-(*     rewrite loopSumM_loopM_iff in H. *)
-(*     eapply TimeInvarianceNF_forward in H. *)
-(*     eapply evalLe_trans_rev with (k := 9) in H as (H1 & H & _). *)
-(*     2:{ unfold s_sim. Lsimpl. } cbn -[mult]. *)
-(*     unfold s_sim.  *)
-(*     eapply evalIn_mono. Lsimpl. eapply (evalIn_refl 0). Lproc. *)
-(*     fold (sizeTM M). ring_simplify. lia. *)
-(*   - intros v (q' & t' & [] & H) % TimeInvarianceNF_backward. inv H. setoid_rewrite loopSumM_loopM_iff. eauto. *)
-(* Qed. *)
