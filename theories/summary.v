@@ -6,7 +6,9 @@ From Undecidability.TM Require Import TM_facts.
 Import VectorNotations2.
 
 From Undecidability.L Require Import TM.TMinL.TMinL_extract.
-From Undecidability.L Require Import Functions.FinTypeLookup Functions.EqBool .
+From Undecidability.L Require Import Functions.FinTypeLookup Functions.EqBool.
+
+From Undecidability Require TM.L.CompilerBoolFuns.Compiler.
 
 Import L_Notations.
 
@@ -32,11 +34,11 @@ Definition TM_bool_computable {k} (R : Vector.t (list bool) k -> (list bool) -> 
 Definition encBoolsL (l : list bool) := Eval cbv in (enc l).
 
 Definition L_bool_computable {k} (R : Vector.t (list bool) k -> (list bool) -> Prop) (τ : nat -> Vector.t nat k -> nat -> Prop) := 
-  exists s, forall v : Vector.t (list bool) k, 
+  exists s, closed s /\ forall v : Vector.t (list bool) k, 
       (forall l, R v l -> exists i, (Vector.fold_left (fun s n => L.app s (encBoolsL n)) s v) ⇓(<= i) (encBoolsL l) /\ τ (length l) (Vector.map (@length bool) v) i) /\
       (forall o, L.eval (Vector.fold_left (fun s n => L.app s (encBoolsL n)) s v) o -> exists l, R v l).
 
-Theorem TimeInvarianceThesis_wrt_Termination_TM_to_L : let C := 10 in
+Theorem TimeInvarianceThesis_wrt_Simulation_TM_to_L : let C := 10 in
   forall n (Σ : finType), forall M : TM Σ n, forall tps,
           (forall tps' i q',
               loopM (mk_mconfig (start M) tps) i = Some (mk_mconfig q' tps') ->
@@ -56,7 +58,7 @@ Proof.
     fold (sizeTM M). ring_simplify. lia.
   - intros v (q' & t' & [] & H) % TimeInvarianceNF_backward. inv H. setoid_rewrite TM_alt.loopSumM_loopM_iff. eauto.
 Qed.
-
+    
 Theorem TimeInvarianceThesis_wrt_Computability_TM_to_L {k} (R : Vector.t (list bool) k -> (list bool) -> Prop) (τ : nat -> Vector.t nat k -> nat -> Prop) :
   TM_bool_computable R τ -> exists p1, L_bool_computable R (fun m v i => exists j, τ m v j /\ p1 v j = i).
 Proof.
@@ -67,7 +69,9 @@ Proof.
         (10 * S N * sizeTM M + 10 + 12 * n +
          (c__prepare * (1 + sumn (Vector.to_list v) + k) + (N * c__unencListTM Σ + c__unencListTM Σ + 25))))
        ).
-  exists p, (the_term s b M). intros v. specialize (H v) as [H1 H2]. split.
+  exists p, (the_term s b M).
+  split. eapply the_term_closed.
+  intros v. specialize (H v) as [H1 H2]. split.
   - intros l (q & t & i & H & He & Hi) % H1.
     exists (p (Vector.map (length (A :=bool)) v) i).
     split. 2: eauto. 
@@ -83,5 +87,24 @@ Proof.
     rewrite Hleq, vector_map_to_list, vector_to_list_length. solverec.
   - intros o (? & ? & ?) % the_term_backward. now eapply H2. eauto.
 Qed.
+
+Theorem TimeInvarianceThesis_wrt_Computability_L_to_TM {k} (R : Vector.t (list bool) k -> (list bool) -> Prop) (τ : nat -> Vector.t nat k -> nat -> Prop) :
+  L_bool_computable R τ -> exists p1, TM_bool_computable R (fun m v i => exists j, τ m v j /\ p1 m v j = i).
+Proof.
+  intros (s & Hcl & H).
+  unshelve epose proof (@Compiler.compiler_correct k R _). 
+  - eapply help_L_bool_computable. exists s. eauto.
+  - eexists. eapply Compiler_facts.TM_bool_computable_hoare'_spec in H0.
+    2:{ eapply Compiler_facts.L_bool_computable_function.
+        edestruct @help_L_bool_computable. exists s. eauto. exists x. eapply H1. }
+    destruct H0 as (n & Σ & s_ & b & Heq & M & HM).
+    exists n, Σ, s_, b. split. eauto. exists M. intros v. split.
+    + intros ? (q & t & [i He] % TM_eval_iff & Hteq) % HM.
+      exists q, t, i. split. eapply He. split. 2:eapply Hteq.
+      admit. (* polynomial bound *)
+    + intros q t' He.
+      pose proof He as [l Hl] % HM.
+      exists l. eapply HM. eauto.
+Admitted.
 
 

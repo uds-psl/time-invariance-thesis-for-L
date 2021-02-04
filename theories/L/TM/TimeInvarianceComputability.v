@@ -110,10 +110,33 @@ Definition TM_bool_computable {k} (R : Vector.t (list bool) k -> (list bool) -> 
           exists l, R v l).
 
 Definition L_bool_computable {k} (R : Vector.t (list bool) k -> (list bool) -> Prop) (τ : nat -> Vector.t nat k -> nat -> Prop) := 
-  exists s, forall v : Vector.t (list bool) k, 
+  exists s, closed s /\  forall v : Vector.t (list bool) k, 
       (forall l, R v l -> exists i, (Vector.fold_left (fun s n => L.app s (encBoolsL n)) s v) ⇓(<= i) (encBoolsL l) /\ τ (length l) (Vector.map (@length bool) v) i) /\
       (forall o, L.eval (Vector.fold_left (fun s n => L.app s (encBoolsL n)) s v) o -> exists l, R v l).
 
+
+From Undecidability Require TM.L.CompilerBoolFuns.Compiler.
+
+Lemma help_L_bool_computable {k} (R : Vector.t (list bool) k -> (list bool) -> Prop) τ : 
+  L_bool_computable R τ -> ClosedLAdmissible.L_bool_computable_closed R.
+Proof.
+  intros (s & Hcl & H).
+  exists s. split. eauto. intros v. split. intros l. split.
+    + intros [i Hi] % H. eapply L_facts.eval_iff. now eapply evalLe_eval_subrelation.
+    + intros H0. pose proof (H1 := H0). eapply H in H1 as [l'].
+      enough (l = l') as -> by eassumption.
+      eapply H in H1 as [i [H1 _]].
+      eapply evalLe_eval_subrelation in H1.
+      eapply Compiler_facts.encBoolsL_inj.
+      rewrite eval_iff in H0. destruct H0 as [H0 H0'], H1 as [H1 H1'].
+      eapply unique_normal_forms; eauto.
+      now rewrite <- H0, H1.
+    + intros o Ho. pose proof Ho as  [l [i [Hi _]] % H] % H. exists l. eapply evalLe_eval_subrelation in Hi.
+      rewrite eval_iff in Ho. destruct Ho, Hi.
+      eapply unique_normal_forms; eauto.
+      now rewrite <- H0, H2.
+Qed.
++
 Section loopM.
   Context (sig : finType).
   Let reg_sig := @encodable_finType sig.
@@ -333,6 +356,23 @@ Section loopM.
     eauto.
   Qed.
 
+  Lemma the_term_closed : closed (the_term).
+  Proof.
+    unfold the_term. eapply closed_dcl. econstructor.
+    2:{ eapply closed_dcl.
+        assert (Hs_sim : proc s_sim). unfold s_sim. Lproc.
+        assert (HencTM : closed (encTM M)). unfold encTM. Lproc. Lproc. }
+    eapply closed_dcl.
+    unfold cont_vec. intros m u. cbn.
+    rewrite subst_many_lam. cbn.
+    destruct (Nat.eqb_spec k (k + S m)); try lia. repeat f_equal.
+    clear. induction k as [ | k'] in m |- * . cbn.
+    - rewrite subst_closed; try Lproc. reflexivity.
+    - rewrite many_vars_S. cbn. rewrite subst_closed; try Lproc.
+      destruct (Nat.eqb_spec k' (S (k' + S m))); try lia. repeat f_equal.
+      erewrite <- IHk' with (m := S m) at 2. repeat f_equal. lia.
+  Qed.
+
 End loopM.
 
 Lemma TM_size_diff {Σ k} (M : TM Σ k) cfg cfg' i j :
@@ -360,7 +400,9 @@ Proof.
         (10 * S N * sizeTM M + 10 + 12 * n +
          (c__prepare * (1 + sumn (Vector.to_list v) + k) + (N * c__unencListTM Σ + c__unencListTM Σ + 25))))
        ).
-  exists p, (the_term s b M). intros v. specialize (H v) as [H1 H2]. split.
+  exists p, (the_term s b M).
+  split. eapply the_term_closed.
+  intros v. specialize (H v) as [H1 H2]. split.
   - intros l (q & t & i & H & He & Hi) % H1.
     exists (p (Vector.map (length (A :=bool)) v) i).
     split. 2: eauto. 
