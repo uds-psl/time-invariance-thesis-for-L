@@ -8,15 +8,12 @@ Note that this repository is a fork of the [Coq Library of Undecidability Proofs
 
 ## Installation Instructions
 
-If you can use `opam 2` on your system, you can follow the instructions here.
-If you cannot use `opam 2`, you can use the `noopam` branch of this repository, which has no dependencies, but less available problems.
-
-### Manual installation
+You need `opam 2` on your system.
 
 You need `Coq 8.12.1` built on OCAML `>= 4.07.1`, the [Smpl](https://github.com/uds-psl/smpl) package, the [Equations](https://mattam82.github.io/Coq-Equations/) package, and the [MetaCoq](https://metacoq.github.io/metacoq/) package for Coq. If you are using opam 2 you can use the following commands to install the dependencies on a new switch:
 
 ```
-opam switch create coq-library-undecidability 4.07.1+flambda
+opam switch create coq-invariance-thesis 4.07.1+flambda
 eval $(opam env)
 opam repo add coq-released https://coq.inria.fr/opam/released
 opam install . --deps-only
