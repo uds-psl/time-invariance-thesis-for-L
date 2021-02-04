@@ -154,6 +154,9 @@ TM/L/HeapInterpreter/StepTM.v
 TM/L/HeapInterpreter/M_LHeapInterpreter.v
 TM/L/HeapInterpreter/UnfoldClos.v
 TM/L/HeapInterpreter/JumpTargetTM.v
+TM/L/HeapInterpreter/LMBounds_Loop.v
+TM/L/HeapInterpreter/LMBounds.v
+
 TM/L/Transcode/Boollist_to_Enc.v
 TM/L/Transcode/Enc_to_Boollist.v
 TM/L/Transcode/BoollistEnc.v
@@ -441,8 +444,8 @@ TM/Univ/Univ.v
 
 TM/PrettyBounds/MaxList.v
 TM/PrettyBounds/SizeBounds.v
-
-
+TM/PrettyBounds/BaseCode.v
+TM/PrettyBounds/PrettyBounds.v
 TM/Reductions/mTM_to_TM.v
 
 TM/Hoare/Hoare.v
@@ -546,6 +549,7 @@ L/AbstractMachines/FlatPro/ProgramsDef.v
 L/AbstractMachines/FlatPro/LM_heap_def.v
 L/AbstractMachines/FlatPro/LM_heap_correct.v
 L/AbstractMachines/FlatPro/UnfoldClos.v
+L/AbstractMachines/SizeAnalysisStep.v
 
 
 L/Computability/Acceptability.v
@@ -785,4 +789,5 @@ SystemF/Reductions/HaltTM_1_to_SysF_TYP.v
 SystemF/Reductions/HaltTM_1_to_SysF_TC.v
 SystemF/Reductions/HaltTM_1_to_SysF_INH.v
 
+LsimTMterm.v
 summary.v
