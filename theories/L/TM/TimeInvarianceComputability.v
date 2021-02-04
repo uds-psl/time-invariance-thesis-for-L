@@ -39,8 +39,8 @@ Proof.
   - reflexivity.
   - eapply redLe_trans with (i := 1) (j := n).
     eapply equiv_many_app_L.
-    { assert (proc h). {eapply Hv. econstructor.} exists 1. split. lia. econstructor. split. 2:reflexivity.
-      eapply beta_red. Lproc. reflexivity. }
+    { assert (proc h).
+      {eapply Hv. econstructor. } exists 1. split. lia. econstructor. split. 2:reflexivity. eapply beta_red. Lproc. reflexivity. }
     rewrite subst_many_lam. replace (n + 0) with n by lia.
     eapply IHv. intros. eapply Hv. now econstructor.
 Qed.
@@ -116,7 +116,7 @@ Definition L_bool_computable {k} (R : Vector.t (list bool) k -> (list bool) -> P
 
 Section loopM.
   Context (sig : finType).
-  Let reg_sig := @registered_finType sig.
+  Let reg_sig := @encodable_finType sig.
   Existing Instance reg_sig.
 
   Variable s b : sig.
