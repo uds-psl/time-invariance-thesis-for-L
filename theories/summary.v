@@ -131,7 +131,10 @@ Proof.
   intros (s & Hcl & H).
   unshelve epose proof (@Compiler.compiler_correct k R _). 
   - eapply help_L_bool_computable. exists s. eauto.
-  - eexists. eapply Compiler_facts.TM_bool_computable_hoare'_spec in H0.
+  - evar (C : nat).
+    exists (fun m v i =>
+         C * (m + sumn (Vector.to_list v) + 1 + i)^5).
+    eapply Compiler_facts.TM_bool_computable_hoare'_spec in H0.
     2:{ eapply Compiler_facts.L_bool_computable_function.
         edestruct @help_L_bool_computable. exists s. eauto. exists x. eapply H1. }
     destruct H0 as (n & Σ & s_ & b & Heq & M & HM).
