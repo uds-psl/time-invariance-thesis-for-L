@@ -21,19 +21,19 @@ Definition encBoolsTM {Σ : Type} (s b : Σ) (l : list bool) :=
 Definition encNatTM {Σ : Type} (s b : Σ) (n : nat) :=
   @midtape Σ [] b (repeat s n).
 
-Definition TM_bool_computable {k} (R : Vector.t (list bool) k -> (list bool) -> Prop) (τ : Vector.t nat k -> nat -> Prop) := 
+Definition TM_bool_computable {k} (R : Vector.t (list bool) k -> (list bool) -> Prop) (τ : nat -> Vector.t nat k -> nat -> Prop) := 
   exists n : nat, exists Σ : finType, exists s b : Σ, s <> b /\ 
   exists M : TM Σ (1 + k + n),
   forall v : Vector.t (list bool) k, 
-  (forall l, R v l -> exists q t i, loopM (mk_mconfig (start M) (Vector.append (niltape ::: Vector.map (encBoolsTM s b) v) (Vector.const niltape n))) i = Some (mk_mconfig q t) /\ (τ (Vector.map (@length bool) v)) i /\ Vector.hd t = encBoolsTM s b l) /\
+  (forall l, R v l -> exists q t i, loopM (mk_mconfig (start M) (Vector.append (niltape ::: Vector.map (encBoolsTM s b) v) (Vector.const niltape n))) i = Some (mk_mconfig q t) /\ (τ (length l) (Vector.map (@length bool) v)) i /\ Vector.hd t = encBoolsTM s b l) /\
   (forall q t, TM.eval M (start M) (Vector.append (niltape ::: Vector.map (encBoolsTM s b) v) (Vector.const niltape n)) q t ->
           exists l, R v l).
 
 Definition encBoolsL (l : list bool) := Eval cbv in (enc l).
 
-Definition L_bool_computable {k} (R : Vector.t (list bool) k -> (list bool) -> Prop) (τ : Vector.t nat k -> nat -> Prop) := 
+Definition L_bool_computable {k} (R : Vector.t (list bool) k -> (list bool) -> Prop) (τ : nat -> Vector.t nat k -> nat -> Prop) := 
   exists s, forall v : Vector.t (list bool) k, 
-      (forall l, R v l -> exists i, (Vector.fold_left (fun s n => L.app s (encBoolsL n)) s v) ⇓(<= i) (encBoolsL l) /\ τ (Vector.map (@length bool) v) i) /\
+      (forall l, R v l -> exists i, (Vector.fold_left (fun s n => L.app s (encBoolsL n)) s v) ⇓(<= i) (encBoolsL l) /\ τ (length l) (Vector.map (@length bool) v) i) /\
       (forall o, L.eval (Vector.fold_left (fun s n => L.app s (encBoolsL n)) s v) o -> exists l, R v l).
 
 Theorem TimeInvarianceThesis_wrt_Termination_TM_to_L : let C := 10 in
@@ -57,8 +57,8 @@ Proof.
   - intros v (q' & t' & [] & H) % TimeInvarianceNF_backward. inv H. setoid_rewrite TM_alt.loopSumM_loopM_iff. eauto.
 Qed.
 
-Theorem TimeInvarianceThesis_wrt_Computability_TM_to_L {k} (R : Vector.t (list bool) k -> (list bool) -> Prop) (τ : Vector.t nat k -> nat -> Prop) :
-  TM_bool_computable R τ -> exists p1, L_bool_computable R (fun v i => exists j, τ v j /\ p1 v j = i).
+Theorem TimeInvarianceThesis_wrt_Computability_TM_to_L {k} (R : Vector.t (list bool) k -> (list bool) -> Prop) (τ : nat -> Vector.t nat k -> nat -> Prop) :
+  TM_bool_computable R τ -> exists p1, L_bool_computable R (fun m v i => exists j, τ m v j /\ p1 v j = i).
 Proof.
   intros (n & Σ & s & b & Heq & M & H).
   pose (p := fun (v : Vector.t nat k) N =>
