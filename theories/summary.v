@@ -30,7 +30,7 @@ Import ListNotations ResourceMeasures.
 (****************)
 Theorem TimeInvarianceThesis_wrt_Simulation_L_to_TM :
   {C : nat & 
-  let p := fun i m => C * (3*i + 2) * (3*i + 2 + m)^3 in
+  let p := fun i m => C * (3*i+2)^2 * (3*i+1+m) * m in
   let M := projT1 M_LHeapInterpreter.Loop in
   forall s, closed s ->
     let tps := [|inTape _ retr_closures_step [(0,compile s)]%list;inTape _ retr_closures_step []%list;inTape _ retr_heap_step []%list|] ++ Vector.const (inVoid _) _ in
@@ -49,9 +49,8 @@ Proof.
     {eapply tspec_tspec_withSpace. hnf. intros i'. cbn; destruct_fin i';cbn. 1-8:eapply inVoid_correct. all:eapply inTape_correct. }
     do 2 eexists. hnf. split.
     { eapply loop_monotone. eassumption.
-     unshelve (erewrite UpToC.correct__leUpToC with (l:=@Loop_steps_nice _ _ ) (x:=(_,_))). easy.
-     cbn ["+" length].
-     unfold p. replace (3 * i + 1 + 1) with (3 * i + 2) by nia. rewrite mult_assoc.
+     unshelve (erewrite UpToC.correct__leUpToC with (l:=@Loop_steps_nice ) (x:=(_,_))).
+     unfold p. cbn ["^"]. replace (3 * i + 1 + 1) with (3 * i + 2) by nia. rewrite Nat.mul_1_r. rewrite !mult_assoc.
      rewrite sizeP_le_size. unfold c. reflexivity.
     }
     do 2 eexists. split. eassumption.

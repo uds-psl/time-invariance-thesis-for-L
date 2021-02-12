@@ -156,6 +156,7 @@ TM/L/HeapInterpreter/UnfoldClos.v
 TM/L/HeapInterpreter/JumpTargetTM.v
 TM/L/HeapInterpreter/LMBounds_Loop.v
 TM/L/HeapInterpreter/LMBounds.v
+TM/L/HeapInterpreter/UnfoldClosBounds.v
 
 TM/L/Transcode/Boollist_to_Enc.v
 TM/L/Transcode/Enc_to_Boollist.v
@@ -545,12 +546,15 @@ L/Complexity/LinDecode/LTDbool.v
 
 
 L/AbstractMachines/LargestVar.v
+L/AbstractMachines/LambdaDepth.v
 L/AbstractMachines/FlatPro/Programs.v
 L/AbstractMachines/FlatPro/ProgramsDef.v
 L/AbstractMachines/FlatPro/LM_heap_def.v
 L/AbstractMachines/FlatPro/LM_heap_correct.v
 L/AbstractMachines/FlatPro/UnfoldClos.v
-L/AbstractMachines/SizeAnalysisStep.v
+L/AbstractMachines/FlatPro/SizeAnalysisStep.v
+L/AbstractMachines/FlatPro/SizeAnalysisUnfoldClos.v
+L/AbstractMachines/FlatPro/SubtermProperty.v
 
 
 L/Computability/Acceptability.v
