@@ -129,7 +129,17 @@ Opaque MK_isVoid_multi.
 
 From Undecidability Require Import TM.L.Transcode.Boollist_to_Enc.
 From Undecidability Require Import EncBoolsTM_boolList.
+From Undecidability.TM.L Require Import SizeBoundsL.
 
+Lemma size_L_enc_bools : (fun (bs:list bool) => L_facts.size (Extract.enc bs)) <=c (fun bs => length bs + 1).
+Proof.
+  etransitivity.
+  -eapply upToC_le with (F:= (fun bs => _ ));intros bs.
+   rewrite Lists.size_list, sumn_le_bound.
+   2:{ intros ? (?&<-&?)%in_map_iff. rewrite LBool.size_bool. reflexivity. }
+   rewrite map_length. reflexivity.
+   -cbn. smpl_upToC_solve.
+Qed. 
 
 Section mk_init_one.
 
@@ -161,7 +171,7 @@ Section mk_init_one.
 
     
   Lemma M_init_one_Spec :
-    { f : UpToC (fun '(s1,s2)=>1) & forall (bs:list bool) (ter : L.term),
+    { f : UpToC (fun '(bs,ter)=>length bs + L_facts.size ter + 1) & forall (bs:list bool) (ter : L.term),
     TripleT ≃≃([],[|Custom (eq (encBoolsTM s b bs));Contains _ (compile ter);Void;Void;Void;Void|])
     (f (bs,ter)) M_init_one (fun _ => ≃≃([],[|Custom (eq (encBoolsTM s b bs));Contains _ (compile (L.app ter (encBoolsL bs)));Void;Void;Void;Void|])) }.
   Proof using H_disj.
@@ -183,19 +193,26 @@ Section mk_init_one.
     }
     etransitivity.
     {
-       unfold f. eapply upToC_le. intros [bs ter].
+       unfold f. eapply upToC_le with (F:=fun '(bs,ter) => _). intros [bs ter].
        rewrite (correct__leUpToC (Rev_steps_nice _)).
        rewrite (correct__leUpToC (BoollistEnc.boollist_size)).
        do 3 rewrite (correct__leUpToC (correct__UpToC _)).
        rewrite rev_length.
-
-       (*
-       rewrite LMBoundsLoop.size_le_sizeP.
-        } 
-    unfold f. smpl_upToC. *)
-  Admitted.
+       rewrite !size_le_sizeP.
+       unfold sizeP;rewrite !sizeP_size.
+       rewrite (correct__leUpToC size_L_enc_bools).
+       reflexivity.
+    }
+       smpl_upToC_solve.
+  Qed.
 
 End  mk_init_one.
+
+Module vec.
+Derive Signature for Vector.t.
+End vec.
+Derive Signature for Fin.t.
+Import vec.
 
 Section mk_init.
 
@@ -207,14 +224,12 @@ Section mk_init.
 
   Variable m k : nat.
 
-  Variable sim : term.
-
   Notation aux n := (Fin.L k (Fin.L m n)) (only parsing).
   Notation auxm n := (Fin.L k (Fin.R 6 n)) (only parsing).
   Notation auxk n := (Fin.R (6 + m) n) (only parsing).
 
-  Fixpoint M_init' k' : (Vector.t (Fin.t k) k') -> pTM (Σ) ^+ unit ((6 + m)+ k).
-  Proof using m s retr_bools sim retr_pro. 
+  Fixpoint M_init' (sim:term) {k'} : (Vector.t (Fin.t k) k') -> pTM (Σ) ^+ unit ((6 + m)+ k).
+  Proof using m s retr_bools retr_pro. 
     simple notypeclasses refine (match k' with
     0 => fun _ => MK_isVoid_multi _ @ [|aux Fin1;aux Fin2;aux Fin3;aux Fin4; aux Fin5|];;
         WriteValue ( (compile sim)) ⇑ retr_pro @ [|aux Fin1|]
@@ -222,15 +237,16 @@ Section mk_init.
     fun ren =>
       _;;M_init_one s retr_pro retr_bools @ [|auxk (ren[@Fin0]);aux Fin1;aux Fin2;aux Fin3;aux Fin4;aux Fin5|]
     end). all:try exact _.
-    2:{apply (M_init' _ (Vector.tl ren)). }
+    2:{apply (M_init' sim _ (Vector.tl ren)). }
   Defined. (* because definition *)
 
 
 
-  Theorem M_init'_SpecT k' (ren :Vector.t (Fin.t k) k') (v:Vector.t (list bool) k):
-  { k &
+  Theorem M_init'_SpecT k' (ren :Vector.t (Fin.t k) k') : 
+  { f : UpToC (fun '(sim,v) => L_facts.size sim + sumn (Vector.to_list (Vector.map (length (A:=bool)) v)) + 1)
+  & forall sim (v:Vector.t (list bool) k),
   TripleT ≃≃([],Vector.const (Custom (eq niltape)) (6+m) ++ Vector.map (fun bs => Custom (eq (encBoolsTM s b bs))) v)
-    k (M_init' ren)
+    (f (sim,v)) (M_init' sim ren)
     (fun _ => ≃≃([],
       ([|Custom (eq niltape);
         Contains retr_pro (compile (Vector.fold_right (fun l_i s => L.app s (encBoolsL l_i)) (select ren v) sim))
@@ -238,24 +254,64 @@ Section mk_init.
   Proof using All.
     depind ren. all:cbn [compile Vector.fold_left M_init' Vector.tl Vector.caseS].
     {
-      eexists. cbn.
-      hstep. hsteps_cbn;cbn. exact (MK_isVoid_multi_SpecT 5). cbn;cleanupParamTM. 2:reflexivity.
-      hsteps_cbn. reflexivity.
-      cleanupParamTM.
-      apply EntailsI. intros t H. eapply tspec_ext. eassumption. easy.
-      intros i. clear - i.
-      repeat (destruct (fin_destruct_S i) as [(i'&->) | ->];[rename i' into i;cbn| ]);try (intros H;exact H).
+      eexists_UpToC f. [f]:refine (fun '(sim,v) => _). 
+      {
+        cbn. intros sim v.
+        hstep. hsteps_cbn;cbn. exact (MK_isVoid_multi_SpecT 5). cbn;cleanupParamTM. 2:reflexivity.
+        hsteps_cbn. reflexivity.
+        cleanupParamTM.
+        apply EntailsI. intros t H. eapply tspec_ext. eassumption. easy.
+        intros i. clear - i.
+        repeat (destruct (fin_destruct_S i) as [(i'&->) | ->];[rename i' into i;cbn| ]);try (intros H;exact H).
+      }
+      unfold f. etransitivity. 
+      {eapply upToC_le with (F:= (fun '(_,_) => _ ));intros []. unfold WriteValue_steps. rewrite !size_le_sizeP. unfold sizeP;rewrite !sizeP_size. reflexivity. }
+      smpl_upToC_solve.
     }
     {
-      eexists. cbn. hstep.
-      3:reflexivity. now apply (projT2 (IHren v)). clear IHren.
-      cbn. intros _. hstep. { cbn. rewrite Vector_nth_R,nth_map'. cbn. eapply (projT2 (M_init_one_Spec H_disj _ _)). }
-      cbn;fold Nat.add;rewrite Nat.eqb_refl;cbn. intros _.
-      apply EntailsI. intros t H. eapply tspec_ext. eassumption. easy.
-      intros i. clear - i. 
-      repeat (destruct (fin_destruct_S i) as [(i'&->) | ->];[rename i' into i;cbn| ]);try (intros H;exact H).
-      rewrite nth_tabulate. destruct (Fin.eqb _ _) eqn:H'. 2:tauto.
-      cbn. eapply Fin.eqb_eq in H' as ->. rewrite Vector_nth_R,nth_map'. cbn. tauto.
+      eexists_UpToC f. [f]:refine (fun '(sim,v) => _).
+      { 
+        cbn. intros sim v.
+        hstep.
+        3:reflexivity. now apply (projT2 IHren). 
+        cbn. intros _. hstep. { cbn. rewrite Vector_nth_R,nth_map'. cbn. eapply (projT2 (M_init_one_Spec H_disj _ _)). }
+        cbn;fold Nat.add;rewrite Nat.eqb_refl;cbn. intros _.
+        apply EntailsI. intros t H. eapply tspec_ext. eassumption. easy.
+        intros i. clear - i. 
+        repeat (destruct (fin_destruct_S i) as [(i'&->) | ->];[rename i' into i;cbn| ]);try (intros H;exact H).
+        rewrite nth_tabulate. destruct (Fin.eqb _ _) eqn:H'. 2:tauto.
+        cbn. eapply Fin.eqb_eq in H' as ->. rewrite Vector_nth_R,nth_map'. cbn. tauto.
+      }
+      unfold f. etransitivity. 
+      {
+        eapply upToC_le with (F:= (fun '(_,_) => _ ));intros [].
+        do 2 rewrite (correct__leUpToC (correct__UpToC _)). reflexivity.
+      }
+      assert (Hnth : forall n h,(fun '(_, x) => | x[@h] |) <=c
+          (fun '(sim, v) =>
+          L_facts.size sim + sumn (Vector.to_list (n:=n) (Vector.map (length (A:=bool)) v)) +
+          1)).
+          {
+          clear. intros. eapply upToC_le;intros [? ?].
+          clear. revert h t0. induction n;intros i v. easy. depelim v. depelim i.
+            now cbn;nia.
+            cbn. rewrite IHn. unfold Vector.to_list. nia.
+          }
+      smpl_upToC.
+      all:try smpl_upToC_solve. now apply Hnth.
+      -clear - Hnth. induction n.
+       +depelim ren;cbn. smpl_upToC_solve.
+       +depelim ren;cbn.
+        etransitivity.   
+        *eapply upToC_le with (F:= (fun '(_,_) => _ ));intros []. unfold select in IHn.  rewrite (correct__leUpToC (IHn ren) (_,_)). reflexivity.
+        *smpl_upToC. all:try smpl_upToC_solve.
+         etransitivity.
+         {
+           eapply upToC_le with (F:= (fun '(_,_) => _ ));intros [? ?].
+           change (encBoolsL t0[@h]) with (Extract.enc t0[@h]).
+           rewrite (correct__leUpToC size_L_enc_bools). reflexivity.
+         }
+           smpl_upToC. apply Hnth. smpl_upToC_solve.
     }
   Qed.
 
@@ -280,27 +336,37 @@ Section mk_init.
 
 
 
-  Definition M_init : pTM (Σ) ^+ unit ((6 + m)+ k) :=
-    M_init' startRen.
+  Definition M_init sim : pTM (Σ) ^+ unit ((6 + m)+ k) :=
+    M_init' sim startRen.
 
     
-  Theorem M_init_SpecT (v:Vector.t (list bool) k):
-  { k &
+  Theorem M_init_SpecT:
+  { f : UpToC (fun '(sim,v) => L_facts.size sim + sumn (Vector.to_list (Vector.map (length (A:=bool)) v)) + 1)
+    & forall sim (v:Vector.t (list bool) k),
   TripleT ≃≃([],Vector.const (Custom (eq niltape)) (6+m) ++ Vector.map (fun bs => Custom (eq (encBoolsTM s b bs))) v)
-    k M_init
+    (f (sim,v)) (M_init sim)
     (fun _ => ≃≃([],
       ([|Custom (eq niltape);
         Contains retr_pro (compile (Vector.fold_left (fun s l_i => L.app s (encBoolsL l_i)) sim v));
          Void;Void;Void;Void|]
          ++Vector.const (Custom (eq niltape)) m) ++ Vector.map (fun bs => Custom (eq (encBoolsTM s b bs))) v))}.
   Proof using H_disj.
-    eexists. unfold M_init.
-    eapply ConsequenceT. eapply (projT2 (M_init'_SpecT _ _)). reflexivity. 2:reflexivity.
+    eexists_UpToC f. [f]:refine (fun '(sim,v) => _).
+    intros. 
+    unfold M_init.
+    eapply ConsequenceT. eapply (projT2 (M_init'_SpecT _)). reflexivity. 2:unfold f;reflexivity.
     cbn. intros _.
     rewrite vector_fold_left_right with (v:=v), <- (startRen_spec v).
     apply EntailsI. intros t H. eapply tspec_ext. eassumption. easy.
     intros i. clear - i. 
     repeat (destruct (fin_destruct_S i) as [(i'&->) | ->];[rename i' into i;cbn| ]);try (intros H;exact H).
+    unfold f;cbn beta.
+    etransitivity.
+    {
+       eapply upToC_le with (F:= fun '(x,y)=>_);intros []. cbn. 
+      setoid_rewrite (correct__leUpToC (correct__UpToC _)). reflexivity.
+    }
+    smpl_upToC_solve.
   Qed.
 
 
@@ -322,18 +388,21 @@ Section conv_output.
     Boollist2encBoolsTM.M s b _ @ [|Fin2;Fin1;Fin3|].
 
   
-  Theorem M_out_SpecT bs:
-    { k &
+  Theorem M_out_SpecT :
+    { f : UpToC (fun bs => length bs + 1) & forall bs,
     TripleT ≃≃([],[|Contains _ (compile (encBoolsL bs));Custom (eq niltape);Void;Void|])
-      k M_out
+      (f bs) M_out
       (fun _ => ≃≃([],
         ([|Custom (fun _ => True); Custom (eq (encBoolsTM s b bs)); Void;Void|])))}.
   Proof.
-    eexists. unfold M_out. hsteps_cbn;cbn.
+    eexists_UpToC f. [f]:refine (fun bs => _).
+    intro bs.
+    unfold M_out. hsteps_cbn;cbn.
     -eapply (projT2 (@EncToBoollist.SpecT _ _ _)).
     -eapply (projT2 (Boollist2encBoolsTM.SpecT _ _ _)).
     - cbn. rewrite rev_involutive. tspec_ext. easy.
-    -reflexivity.
+    -unfold f.  setoid_rewrite (correct__leUpToC (correct__UpToC _)). rewrite rev_length. reflexivity.
+    -unfold f. smpl_upToC_solve.
   Qed.
 
 End conv_output.
@@ -397,7 +466,7 @@ Section main.
         (Custom (eq (encBoolsTM sym_s sym_b m)):::Vector.const (Custom (fun _ => True)) _))).
   Proof  using Hscl Hs2 Hs1.
     unfold M_main.
-    hstep. { eapply TripleT_Triple,(projT2 (M_init_SpecT syms_diff _ _ _ _ _)). }
+    hstep. { eapply TripleT_Triple,(projT2 (M_init_SpecT syms_diff _ _ _ _)). }
     cbn. intros _.
     start_TM.
     hstep. {hsteps_cbn;cbn. eapply TripleT_Triple. exact (MK_isVoid_multi_SpecT 9). }
@@ -409,7 +478,7 @@ Section main.
     hintros Heval%eval_iff. specialize (Hs2 Heval) as (res&->). 
     unfold_abbrev.
     eapply Triple_exists_con. eexists res. 
-    hstep. { eapply Consequence_pre. eapply TripleT_Triple. refine (projT2 (M_out_SpecT _ _ _ _ res)). cbn. reflexivity. }
+    hstep. { eapply Consequence_pre. eapply TripleT_Triple. refine (projT2 (M_out_SpecT _ _ _ _) res). cbn. reflexivity. }
     cbn;cleanupParamTM. intros _.
     apply Hs1 in Heval.
     eapply EntailsI. intros tin [[] Hin]%tspecE.
@@ -428,7 +497,7 @@ Proof  using Hscl Hs2 Hs1.
   apply Hs1 in H as H%eval_iff. eapply eval_evalIn in H as [? H].
   (* edestruct EvalL.SpecT'. 2:eassumption. now eapply closed_compiler_helper. *)
   eexists. 
-  hstep. { eapply (projT2 (M_init_SpecT syms_diff _ _ _ _ _)). } 2:reflexivity.
+  hstep. { eapply (projT2 (M_init_SpecT syms_diff _ _ _ _)). } 2:reflexivity.
   cbn. intros _.
   start_TM.
   hstep. {hsteps_cbn;cbn. exact (MK_isVoid_multi_SpecT 9). } 2:reflexivity.
@@ -436,7 +505,7 @@ Proof  using Hscl Hs2 Hs1.
   hstep. { eapply LiftTapes_SpecT. now smpl_dupfree. cbn. apply @EvalL.SpecT. }
   cbn;cleanupParamTM.
   intros _.
-  hstep. now refine (projT2 (M_out_SpecT _ _ _ _ res)). 
+  hstep. now refine (projT2 (M_out_SpecT _ _ _ _) res). 
   cbn;cleanupParamTM. intros _. 
   eapply EntailsI. intros tin [[] Hin]%tspecE.
   eapply tspecI;cbn. easy.

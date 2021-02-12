@@ -3,88 +3,11 @@ From Undecidability Require Import TM.PrettyBounds.PrettyBounds.
 From Undecidability Require Import TM.PrettyBounds.BaseCode.
 From Undecidability Require Import LM_heap_def TM.PrettyBounds.MaxList.
 
-From Undecidability.TM.L Require Import Alphabets CaseCom StepTM M_LHeapInterpreter LMBounds.
+From Undecidability.TM.L Require Import Alphabets CaseCom StepTM M_LHeapInterpreter LMBounds SizeBoundsL.
 From Undecidability.L.AbstractMachines Require Import SizeAnalysisStep .
 
 From Undecidability Require Import UpToC UpToCNary.
 
-
-
-Lemma sizeT_ge_1 t:
-  1 <= sizeT t.
-Proof.
-  destruct t;cbn. all:nia.
-Qed.
-
-Lemma size_sizeT_le t:
-  size t <= 2* sizeT t.
-Proof.
-  destruct t.
-  1:rewrite size_Var.
-  all:cbv - [plus mult]. all:nia.
-Qed.
-
-Lemma size_le_sizeP P:
-  size P <= 3 * sizeP P.
-Proof.
-  induction P as [ | t P].
-  {now cbv. }
-  setoid_rewrite encodeList_size_cons. rewrite IHP.
-  unfold sizeP;cbn. rewrite size_sizeT_le.
-  specialize (sizeT_ge_1 t). nia.
-Qed.
-
-Lemma sizeT_le_size t:
-  sizeT t <= size t.
-Proof.
-  destruct t.
-  1:rewrite LMBounds.size_Var.
-  all:cbv - [plus mult]. all:nia.
-Qed.
-
-Lemma sizeP_le_size P:
-  sizeP P <= size P.
-Proof.
-  induction P as [ | t P].
-  {now cbv. }
-  setoid_rewrite BaseCode.encodeList_size_cons. rewrite <- IHP.
-  unfold sizeP;cbn. rewrite sizeT_le_size. nia.
-Qed.
-
-(*
-Lemma sizeH_le H:
-  size H <= 
-Proof.
-  induction P as [ | t P].
-  {now cbv. }
-  setoid_rewrite encodeList_size_cons. rewrite IHP.
-  unfold sizeP;cbn. rewrite size_sizeT_le.
-  specialize (sizeT_ge_1 t). nia.
-Qed.
- *)
-
-Lemma size_list (sig X : Type) (cX : codable sig X) (xs : list X):
-  size xs = length xs + sumn (map size xs) + 1.
-Proof.
-  induction xs. now rewrite encodeList_size_nil.
-  rewrite encodeList_size_cons. cbn [length map sumn]. nia.
-Qed.
-
-Lemma size_list_le_bound (sig X : Type) (cX : codable sig X) (xs : list X) c:
-  (forall x, x el xs -> size x <= c)
-  -> size xs <= length xs * (c+1) + 1.
-Proof.
-  intros H. rewrite size_list. rewrite sumn_le_bound.
-  2:{ intros ?. rewrite in_map_iff. intros (?&<-&?). eauto. }
-  rewrite map_length. nia.
-Qed.
-
-Lemma size_HClos_le (g : HClos):
-  size g = fst g + size (snd g) + 1.
-Proof.
-  rewrite Encode_Clos_hasSize. destruct g as [a P];cbn.
-  replace (Encode_list_size _ P) with (size P). nia. apply Encode_list_hasSize.
-Qed.
 
 Lemma heap_greatest_address2_bound H c:
   (forall P a, Some (P,a) el H -> a <= c) -> LM_Lookup_nice.heap_greatest_address2 H <= c.

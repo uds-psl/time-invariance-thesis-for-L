@@ -149,6 +149,7 @@ Shared/Libs/PSL/FiniteTypes/VectorFin.v
 
 TM/L/Alphabets.v
 TM/L/CaseCom.v
+TM/L/SizeBoundsL.v
 TM/L/HeapInterpreter/LookupTM.v
 TM/L/HeapInterpreter/StepTM.v
 TM/L/HeapInterpreter/M_LHeapInterpreter.v
