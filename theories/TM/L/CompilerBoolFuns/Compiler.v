@@ -405,8 +405,8 @@ Section main.
   Hypothesis Hscl : closed s.
 
   Variable Hs1 : (forall v, forall m : list bool,
-   R v m <->
-   L.eval (Vector.fold_left (fun (s0 : term) (n : list bool) => L.app s0 (encBoolsL n)) s v) (encBoolsL m)).
+   L.eval (Vector.fold_left (fun (s0 : term) (n : list bool) => L.app s0 (encBoolsL n)) s v) (encBoolsL m)
+   -> R v m).
 
   Variable Hs2 : (forall v, forall o : term,
                      L.eval (Vector.fold_left (n := k) (fun (s0 : term) (n : list bool) => L.app s0 (encBoolsL n)) s v) o ->
@@ -451,7 +451,7 @@ Section main.
        M_main
       (fun _ t => exists m, t ≃≃ ([R v m]%list,
         (Custom (eq (encBoolsTM sym_s sym_b m)):::Vector.const (Custom (fun _ => True)) _))).
-  Proof  using Hscl Hs2 Hs1.
+  Proof  using Hscl Hs1 Hs2.
     unfold M_main.
     hstep. { eapply TripleT_Triple,(projT2 (M_init_SpecT syms_diff _ _ _ _)). }
     cbn. intros _.
