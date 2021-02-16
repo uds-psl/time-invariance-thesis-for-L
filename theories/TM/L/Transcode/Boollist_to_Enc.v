@@ -285,7 +285,7 @@ Module BoollistToEnc.
 
     Definition Terminates := projT2 _Terminates.
 
-    Lemma SpecT  :
+    Lemma SpecT'  :
     { f : UpToC (fun bs => length bs + 1) &
       forall (bs : list bool),
       TripleT 
@@ -306,6 +306,8 @@ Module BoollistToEnc.
         rewrite <- Hk. [f]:intro. now unfold f.
       - subst f. setoid_rewrite UpToC_le. smpl_upToC_solve.
     Qed.     
+    
+    Definition SpecT := projT2 SpecT'.
 
   End M.
 

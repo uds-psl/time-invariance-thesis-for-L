@@ -227,3 +227,51 @@ Proof.
   revert s. depind v. all:cbn. easy.
   intros. eapply IHv. change (encBoolsL h) with (enc h). Lproc.
 Qed. 
+
+Module vec.
+Derive Signature for Vector.t.
+End vec.
+Derive Signature for Fin.t.
+Import vec.
+
+
+Lemma size_L_enc_bools : (fun (bs:list bool) => L_facts.size (Extract.enc bs)) <=c (fun bs => length bs + 1).
+Proof.
+  etransitivity.
+  -eapply upToC_le with (F:= (fun bs => _ ));intros bs.
+   rewrite Lists.size_list, sumn_le_bound.
+   2:{ intros ? (?&<-&?)%in_map_iff. rewrite LBool.size_bool. reflexivity. }
+   rewrite map_length. reflexivity.
+   -cbn. smpl_upToC_solve.
+Qed. 
+
+Arguments c__leUpToC {_ _ _} _.
+
+
+Lemma size_fold_app k : 
+  (fun '(s,v) => L_facts.size
+      (Vector.fold_left (n:=k)
+         (fun (s0 : term) (l_i : list bool) => L.app s0 (encBoolsL l_i)) s v))
+         <=c (fun '(s,v) => (L_facts.size s + sumn (Vector.to_list (Vector.map (length (A:=bool)) v)) + 1)).
+Proof.
+  induction k.
+  { exists 1;intros [s v]. cbn. depelim v;cbn. nia. }
+  exists (2 +  2 * c__leUpToC IHk + c__leUpToC IHk * c__leUpToC size_L_enc_bools);intros [s v]. depelim v;cbn. 
+  setoid_rewrite (correct__leUpToC IHk (_,_)).
+  unfold Vector.to_list. set (m := sumn _).
+  change (encBoolsL h) with (Extract.enc h). cbn.
+  setoid_rewrite (correct__leUpToC size_L_enc_bools h).
+  ring_simplify. nia. 
+Qed.
+
+From Undecidability.L Require Import LargestVar.
+
+Lemma LargestVar_fold k s v: 
+LargestVar.largestVar
+       (Vector.fold_left (n:=k)
+          (fun (s0 : term) (l_i : list bool) => L.app s0 (encBoolsL l_i)) s v)
+    <= max (LargestVar.largestVar s) 1.
+Proof.
+  induction k in s,v|-*; depelim v. cbn;now easy.
+  cbn. setoid_rewrite IHk. cbn. rewrite largestVar_bools. nia.
+Qed.

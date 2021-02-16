@@ -221,11 +221,9 @@ Section loopM.
   Lemma list_size_length {X} (l : list (list X)) : length l <= list_size l. Proof. clear. unfold list_size. lia. Qed.
   Lemma list_size_sum {X} (l : list (list X)) : sumn (map (@length X) l) <= list_size l. Proof. clear. unfold list_size. lia. Qed.
 
-  Let C :=  c__leUpToC (H := mapTime_upTo (fun x0 : list bool => S (| x0 |) * c__encBools)).
+  Let C :=  c__leUpToC (mapTime_upTo (fun x0 : list bool => S (| x0 |) * c__encBools)).
 
   Definition c__prepare :=  (S c__app * S C * S c__encBools * S c__map  + 18).
-
-  Axiom F : False.
 
   Lemma lemma_map_time:
     forall x : list (list bool), map_time (fun x0 : list bool => S (| x0 |) * c__encBools) x <= S (list_size x) * S c__encBools * c__map.

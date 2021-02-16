@@ -11,7 +11,7 @@ From Undecidability.L Require Import Functions.FinTypeLookup Functions.EqBool.
 From Undecidability.TM.L Require CompilerBoolFuns.Compiler.
 From Undecidability.TM.L Require Import CompilerBoolFuns.Compiler   Alphabets StepTM M_LHeapInterpreter LMBounds_Loop.
 
-From Undecidability.TM.L Require Import (*JumpTargetTM*) Alphabets StepTM M_LHeapInterpreter LMBounds_Loop.
+From Undecidability.TM.L Require Import (*JumpTargetTM*) Alphabets StepTM M_LHeapInterpreter LMBounds_Loop SizeBoundsL.
 From Undecidability Require Import L.AbstractMachines.FlatPro.LM_heap_correct.
 
 Import L_Notations.
@@ -19,7 +19,7 @@ Import L_Notations.
 From Equations Require Import Equations.
 
 Require Import Ring ZArith Arith Lia.
-From Undecidability Require Import ProgrammingTools LM_heap_def (*WriteValue CaseList Copy*) ListTM Hoare LsimTMterm.
+From Undecidability Require Import ProgrammingTools LM_heap_def (*WriteValue CaseList Copy*) ListTM Hoare LsimTMterm TimeInvarianceLtoTM.
 
 Import Vector.VectorNotations.
 Import ListNotations ResourceMeasures.
@@ -30,7 +30,7 @@ Import ListNotations ResourceMeasures.
 (****************)
 Theorem TimeInvarianceThesis_wrt_Simulation_L_to_TM :
   {C : nat & 
-  let p := fun i m => C * (3*i + 2) * (3*i + 2 + m)^3 in
+  let p := fun i m => C * (3*i+2)^2 * (3*i+1+m) * m in
   let M := projT1 M_LHeapInterpreter.Loop in
   forall s, closed s ->
     let tps := [|inTape _ retr_closures_step [(0,compile s)]%list;inTape _ retr_closures_step []%list;inTape _ retr_heap_step []%list|] ++ Vector.const (inVoid _) _ in
@@ -49,9 +49,8 @@ Proof.
     {eapply tspec_tspec_withSpace. hnf. intros i'. cbn; destruct_fin i';cbn. 1-8:eapply inVoid_correct. all:eapply inTape_correct. }
     do 2 eexists. hnf. split.
     { eapply loop_monotone. eassumption.
-     unshelve (erewrite UpToC.correct__leUpToC with (l:=@Loop_steps_nice _ _ ) (x:=(_,_))). easy.
-     cbn ["+" length].
-     unfold p. replace (3 * i + 1 + 1) with (3 * i + 2) by nia. rewrite mult_assoc.
+     unshelve (erewrite UpToC.correct__leUpToC with (l:=@Loop_steps_nice ) (x:=(_,_))).
+     unfold p. cbn ["^"]. replace (3 * i + 1 + 1) with (3 * i + 2) by nia. rewrite Nat.mul_1_r. rewrite !mult_assoc.
      rewrite sizeP_le_size. unfold c. reflexivity.
     }
     do 2 eexists. split. eassumption.
@@ -126,26 +125,14 @@ Definition L_bool_computable {k} (R : Vector.t (list bool) k -> (list bool) -> P
 (** THEOREM 2.1 *)
 (****************)
 Theorem TimeInvarianceThesis_wrt_Computability_L_to_TM {k} (R : Vector.t (list bool) k -> (list bool) -> Prop) (τ : nat -> Vector.t nat k -> nat -> Prop) :
-  L_bool_computable R τ -> exists p1, TM_bool_computable R (fun m v i => exists j, τ m v j /\ p1 m v j = i).
+  L_bool_computable R τ -> exists (c:nat),
+    let p m v j := let m_v := sumn (Vector.to_list v) in c*(j + 1) * (j + m_v + 1) * ((m_v + 1) * (j + 1) + m) in 
+  TM_bool_computable R (fun m v i => exists j, τ m v j /\ i <= p m v j ).
 Proof.
-  intros (s & Hcl & H).
-  unshelve epose proof (@Compiler.compiler_correct k R _). 
-  - eapply help_L_bool_computable. exists s. eauto.
-  - evar (C : nat).
-    exists (fun m v i =>
-         C * (m + sumn (Vector.to_list v) + 1 + i)^5).
-    eapply Compiler_facts.TM_bool_computable_hoare'_spec in H0.
-    2:{ eapply Compiler_facts.L_bool_computable_function.
-        edestruct @help_L_bool_computable. exists s. eauto. exists x. eapply H1. }
-    destruct H0 as (n & Σ & s_ & b & Heq & M & HM).
-    exists n, Σ, s_, b. split. eauto. exists M. intros v. split.
-    + intros ? (q & t & [i He] % TM_eval_iff & Hteq) % HM.
-      exists q, t, i. split. eapply He. split. 2:eapply Hteq.
-      admit. (* polynomial bound *)
-    + intros q t' He.
-      pose proof He as [l Hl] % HM.
-      exists l. eapply HM. eauto.
-Admitted.
+  intros H. destruct (compiler_correct_timeInv H) as [c Hc].
+  exists c. eapply TM_bool_computable_hoare'_spec. now eapply L_bool_computable_time_function.
+  eassumption.
+Qed.
 
 (****************)
 (** THEOREM 2.2 *)
