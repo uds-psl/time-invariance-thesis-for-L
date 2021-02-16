@@ -81,11 +81,11 @@ Proof.
   prove_nary upToC_mul_c_r.
 Qed.
 
-Lemma upToC_mul_descend_nary (domain : list Type) (f g : Rarrow domain nat) f' g':
-  Uncurry f <=c f'
-  -> Uncurry g <=c g'
+Lemma upToC_mul_descend_nary (domain : list Type) (f g f' g': Rarrow domain nat):
+  Uncurry f <=c Uncurry f'
+  -> Uncurry g <=c Uncurry g'
   -> Fun' (fun x => App f x * App g x)
-    <=c Fun' (fun x => f' x * g' x).
+    <=c Fun' (fun x => App f' x * App g' x).
 Proof.
   prove_nary upToC_mul_descend. 
 Qed.

@@ -1,5 +1,5 @@
 From Undecidability.L Require Import Util.Subterm.
-From Undecidability.L.Datatypes Require Import LProd LNat LTerm.
+From Undecidability.L.Datatypes Require Import LProd LNat LTerm LBool List_enc.
 
 Fixpoint largestVar (s:term) : nat :=
   match s with
@@ -41,3 +41,25 @@ Proof.
   all:try Lia.lia.
 Qed.
 
+Lemma largestVar_bool (b:bool):
+  largestVar (enc b) <= 1.
+Proof.
+  destruct b;cbv. all:easy.
+Qed.
+
+Lemma largestVar_list X {R:encodable X} (xs:list X):
+  largestVar (enc xs) <= max (list_max (map (fun x => largestVar (enc x)) xs)) 1.
+Proof.
+  unfold enc,encodable_list_enc.
+  induction xs. now cbv.
+  cbn.
+  rewrite IHxs. unfold enc,list_max. nia.
+Qed.
+
+Lemma largestVar_bools (bs:list bool):
+  largestVar (enc bs) <= 1.
+Proof.
+  rewrite largestVar_list.
+  specialize list_max_le with (n:=1) as [_ H]. rewrite H. easy.
+  eapply Forall_forall. intros ? (?&<-&?)%in_map_iff. eapply largestVar_bool.
+Qed.

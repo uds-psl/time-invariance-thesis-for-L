@@ -131,16 +131,6 @@ From Undecidability Require Import TM.L.Transcode.Boollist_to_Enc.
 From Undecidability Require Import EncBoolsTM_boolList.
 From Undecidability.TM.L Require Import SizeBoundsL.
 
-Lemma size_L_enc_bools : (fun (bs:list bool) => L_facts.size (Extract.enc bs)) <=c (fun bs => length bs + 1).
-Proof.
-  etransitivity.
-  -eapply upToC_le with (F:= (fun bs => _ ));intros bs.
-   rewrite Lists.size_list, sumn_le_bound.
-   2:{ intros ? (?&<-&?)%in_map_iff. rewrite LBool.size_bool. reflexivity. }
-   rewrite map_length. reflexivity.
-   -cbn. smpl_upToC_solve.
-Qed. 
-
 Section mk_init_one.
 
   Variable Σ : finType.
@@ -208,11 +198,7 @@ Section mk_init_one.
 
 End  mk_init_one.
 
-Module vec.
-Derive Signature for Vector.t.
-End vec.
-Derive Signature for Fin.t.
-Import vec.
+
 
 Section mk_init.
 
@@ -407,6 +393,7 @@ Section conv_output.
 
 End conv_output.
 
+From Undecidability.TM.L.HeapInterpreter Require UnfoldClosBounds.
 
 Section main.
 
@@ -486,35 +473,79 @@ Section main.
     intros i. specialize (Hin i). destruct_fin i;try exact Logic.I;cbn in *.
     now simpl_vector. eassumption.
   Qed.
+End main.
 
-Theorem M_main_SpecT v res:
-  R v res -> exists k__steps,
-  TripleT ≃≃([],Vector.const (Custom (eq niltape)) (S n_main) ++ Vector.map (fun bs => Custom (eq (encBoolsTM sym_s sym_b bs))) v)
-  k__steps M_main
-    (fun _ => ≃≃([],Custom (eq (encBoolsTM sym_s sym_b res)):::Vector.const (Custom (fun _ => True)) _)).
-Proof  using Hscl Hs2 Hs1.
-  unfold M_main. intros ?.
-  apply Hs1 in H as H%eval_iff. eapply eval_evalIn in H as [? H].
-  (* edestruct EvalL.SpecT'. 2:eassumption. now eapply closed_compiler_helper. *)
-  eexists. 
-  hstep. { eapply (projT2 (M_init_SpecT syms_diff _ _ _ _)). } 2:reflexivity.
+Import UpToCNary.
+
+
+
+Polymorphic Lemma upToC_mul_descend_nary (domain : list Type) (f g f' g': Rarrow domain nat):
+  Uncurry f <=c Uncurry f'
+  -> Uncurry g <=c Uncurry g'
+  -> Fun' (fun x => App f x * App g x)
+    <=c Fun' (fun x => App f' x * App g' x).
+Proof.
+  prove_nary upToC_mul_descend. 
+Qed.
+
+Theorem M_main_SpecT k s (Hscl : closed s):
+  { f : UpToC (fun '(i,m_r,m_v) => (i+1)*(i+m_v+1)*((m_v+1)*(i+1) + m_r)) & 
+  forall i v res,
+    (Vector.fold_left (fun (s0 : term) (n : list bool) => L.app s0 (encBoolsL n)) s v) ⇓(i) (encBoolsL res)  ->
+    TripleT ≃≃([],Vector.const (Custom (eq niltape)) (S n_main) ++ Vector.map (fun bs => Custom (eq (encBoolsTM sym_s sym_b bs))) v)
+    (f (i,length res,sumn (Vector.to_list (Vector.map (length (A:=bool)) v)))) (M_main k s)
+      (fun _ => ≃≃([],Custom (eq (encBoolsTM sym_s sym_b res)):::Vector.const (Custom (fun _ => True)) (13+S k)))}.
+Proof.
+  eexists_UpToC f. [f]:refine (fun '(i,m_r,m_v) => _). 
+  intros ? ? ? Red. unfold M_main.
+  eapply ConsequenceT_pre. 2:reflexivity.
+  { 
+  hstep. { eapply (projT2 (M_init_SpecT syms_diff _ _ _ _)). }
+  2:{ set (f' := f__UpToC _). pose (H' := correct__UpToC _ :f' <=c _). rewrite (correct__leUpToC H'). subst f' H'; cbn beta;reflexivity. }
   cbn. intros _.
   start_TM.
   hstep. {hsteps_cbn;cbn. exact (MK_isVoid_multi_SpecT 9). } 2:reflexivity.
   cbn;cleanupParamTM. intros _.
-  hstep. { eapply LiftTapes_SpecT. now smpl_dupfree. cbn. apply @EvalL.SpecT. }
+  hstep. { eapply LiftTapes_SpecT. now smpl_dupfree. cbn. unshelve apply EvalL.SpecT. 3:now eapply closed_compiler_helper. 3:easy. }
   cbn;cleanupParamTM.
   intros _.
   hstep. now refine (projT2 (M_out_SpecT _ _ _ _) res). 
   cbn;cleanupParamTM. intros _. 
   eapply EntailsI. intros tin [[] Hin]%tspecE.
   eapply tspecI;cbn. easy.
-  intros i. specialize (Hin i). destruct_fin i;try exact Logic.I;cbn in *.
-  now simpl_vector. eassumption. reflexivity.
-  Unshelve. 3:easy. now eapply closed_compiler_helper.
-Qed.
+  intros j. specialize (Hin j). destruct_fin j;try exact Logic.I;cbn in *.
+  now simpl_vector. eassumption. cbn beta.
+  set (l:= EvalL.steps _ _).
+  pose (Hl:= proj2_sig UnfoldClosBounds.EvalL_steps_nice' _ _ _ _ _ : l <= _ ). 
+  rewrite Hl.   setoid_rewrite (correct__leUpToC (correct__UpToC _)) at 1. reflexivity.
+  } 
+  set (f' := L_facts.size
+      (Vector.fold_left _ _ _)). pose (H':= correct__leUpToC (size_fold_app k) (s,v) : f' <= _).
+      cbn in H'. setoid_rewrite H'. clear f' H'.
+  rewrite (LargestVar_fold s v) at 1.
+  change (encBoolsL) with (Extract.enc (X:=list bool)).
+  rewrite (correct__leUpToC size_L_enc_bools res).
 
-End main.
+  unfold f;cbn beta iota.
+  set (m_s:= L_facts.size s). set (m_v:= sumn (Vector.to_list (Vector.map (length (A:=bool)) v))). 
+  set (m_r := length res).
+  reflexivity.
+  unfold f. cbn - ["+" "*"]. clear.
+  assert ( (fun _ => 1) <=c (fun '(i, m_r,m_v) => (i + 1) * (i + m_v+1) * ((m_v + 1) * (i + 1) + m_r))) by smpl_upToC_solve.
+  smpl_upToC.
+  1,3:now smpl_upToC_solve.
+  eapply leUpToC_proper_eq with (x:=fun '(i, m_r,m_v) => _) (x0:=fun '(i, m_r,m_v) => _).
+  { intros [[]]. rewrite <- !Nat.mul_assoc. reflexivity. }
+  { intros [[]]. rewrite <- !Nat.mul_assoc. reflexivity. }
+  nary simple apply upToC_mul_descend_nary. reflexivity.
+  nary simple apply upToC_mul_descend_nary. now smpl_upToC_solve.
+  smpl_upToC.
+  2,3:smpl_upToC_solve.
+  transitivity ((fun '(t', x) => let '(t'0, x0) := t' in (0*x0)+(x + 1) * (t'0 + 1))).
+  1,2:cbn.
+  nary simple apply upToC_mul_descend_nary; now smpl_upToC_solve.
+  smpl_upToC_solve.
+Qed.
 
 Theorem compiler_correct {k} (R : Vector.t (list bool) k -> (list bool) -> Prop) :
   L_bool_computable_closed R -> TM_bool_computable_hoare' R.
@@ -525,5 +556,6 @@ Proof.
   eexists _, _, sym_s, sym_b. split. eapply syms_diff. exists (M_main k sim).
   intros v. split.
   - eapply M_main_Spec. easy. all:firstorder.
-  - eapply M_main_SpecT. easy. all:firstorder.
+  - intros. edestruct eval_evalIn. now apply eval_iff,Hsim.
+    eexists. eapply (projT2 (M_main_SpecT _ cs)). easy.
 Qed.

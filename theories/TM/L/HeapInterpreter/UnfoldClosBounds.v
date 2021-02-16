@@ -6,7 +6,7 @@ From Undecidability.L.Complexity  Require Import UpToCNary.
 From Undecidability.L.AbstractMachines Require Import FlatPro.Programs LM_heap_correct LM_heap_def.
 From Undecidability.L.AbstractMachines Require Import (*FlatPro.Computable.Compile *) SizeAnalysisUnfoldClos LambdaDepth.
 (* Unset Printing Coercions. *)
-From Undecidability.TM.L Require Import Eval UnfoldClos.
+From Undecidability.TM.L Require Import Eval UnfoldClos SizeBoundsL.
 (* From Coq Require Import Lia Ring Arith. *)
 (* From Undecidability.TM.L Require Import Boollist_to_Enc. *)
 From Undecidability.TM.L.HeapInterpreter Require Import LMBounds LMBounds_Loop.
@@ -49,13 +49,13 @@ Proof.
     destruct t.
     2-4:cbv - [length "+" "*" c];cbn [length];ring_simplify;enough (103 <= c) by nia;shelve.
     assert (Hn : n<= maxVar) by now cbn in Hk.
-    rewrite LMBounds.size_Var;cbv [CaseCom.CaseCom_steps CopyValue_steps ].
+    rewrite size_Var;cbv [CaseCom.CaseCom_steps CopyValue_steps ].
     rewrite UpToC_le. do 3 rewrite Code.Encode_nat_hasSize. assert (k<= maxDepth+ 1) as Hk2 by now rewrite lambdaDepthP_min.
     rewrite Hk2 at 1 2. rewrite Hn at 1 2.
     destruct (Nat.leb_spec k n).
     2:{
       unfold  CaseCom.Constr_varT_steps, Constr_cons_steps , Reset_steps.
-      rewrite LMBounds.size_Var;cbv [CaseCom.CaseCom_steps CopyValue_steps ].
+      rewrite size_Var;cbv [CaseCom.CaseCom_steps CopyValue_steps ].
       rewrite Code.Encode_nat_hasSize. unshelve erewrite ( _ : n - k <= maxVar). nia.
       change (Pos.to_nat 3) with 3.
       rewrite Hn. ring_simplify. enough (c__leUpToC (projT1 NatSub.Subtract_SpecT) +245 <= c) by nia. shelve.

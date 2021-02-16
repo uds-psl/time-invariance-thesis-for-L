@@ -127,7 +127,7 @@ Definition L_bool_computable {k} (R : Vector.t (list bool) k -> (list bool) -> P
 Theorem TimeInvarianceThesis_wrt_Computability_L_to_TM {k} (R : Vector.t (list bool) k -> (list bool) -> Prop) (τ : nat -> Vector.t nat k -> nat -> Prop) :
   L_bool_computable R τ -> exists p1, TM_bool_computable R (fun m v i => exists j, τ m v j /\ p1 m v j = i).
 Proof.
-  intros (s & Hcl & H).
+  intros (s & Hcl & H). 
   unshelve epose proof (@Compiler.compiler_correct k R _). 
   - eapply help_L_bool_computable. exists s. eauto.
   - evar (C : nat).
