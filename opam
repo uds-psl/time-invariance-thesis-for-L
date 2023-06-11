@@ -13,7 +13,7 @@ authors: ["Yannick Forster"
           "Gert Smolka"
           "Simon Spies"
           "Dominik Wehr"
-          "Maximilian Wuttke"]
+          "Maxi Wuttke"]
 license: "CeCILL"
 build: [
   [make "-j%{jobs}%"]

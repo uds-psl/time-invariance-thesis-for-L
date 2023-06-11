@@ -1,5 +1,5 @@
 (* * Dupfree vector *)
-(* Author: Maximilian Wuttke *)
+(* Author: Maxi Wuttke *)
 
 From Undecidability.Shared.Libs.PSL Require Import Prelim.
 From Undecidability.Shared.Libs.PSL Require Import Tactics.Tactics.

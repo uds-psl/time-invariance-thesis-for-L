@@ -1,6 +1,6 @@
 (* * Library for retracts  *)
 
-(* Author: Maximilian Wuttke *)
+(* Author: Maxi Wuttke *)
 
 From Undecidability.Shared.Libs.PSL Require Import Base.
 

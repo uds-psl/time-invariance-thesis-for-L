@@ -1,6 +1,6 @@
 # A Mechanised Proof of the Time Invariance Thesis for the Weak Call-by-value λ-Calculus
 
-This repository contains the code of the paper "A Mechanised Proof of the Time Invariance Thesis for the Weak Call-by-value λ-Calculus" by Yannick Forster, Fabian Kunze, Gert Smolka, and Maximilian Wuttke.
+This repository contains the code of the paper "A Mechanised Proof of the Time Invariance Thesis for the Weak Call-by-value λ-Calculus" by Yannick Forster, Fabian Kunze, Gert Smolka, and Maxi Wuttke.
 
 A summary of the main results can be found in [`summary.v`](theories/summary.v).
 
