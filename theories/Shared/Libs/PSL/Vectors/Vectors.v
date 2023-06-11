@@ -1,5 +1,5 @@
 (* * Addendum for Vectors ([Vector.t]) *)
-(* Author: Maximilian Wuttke *)
+(* Author: Maxi Wuttke *)
 
 
 From Undecidability.Shared.Libs.PSL Require Import Prelim Tactics.Tactics EqDec.

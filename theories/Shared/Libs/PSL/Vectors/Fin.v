@@ -1,6 +1,6 @@
 (* * Tactics for [Fin.t] *)
 
-(* Author: Maximilian Wuttke and Fabian Kunze *)
+(* Author: Maxi Wuttke and Fabian Kunze *)
 
 
 From Undecidability.Shared.Libs.PSL Require Import Base.
